@@ -42,46 +42,6 @@ defmodule ConnectFour.Game do
     GenServer.cast(__MODULE__, {:reset_game_board})
   end
 
-  # @doc """
-  # Primes the cache by parsing files in the `priv/data` directory
-  # """
-  # def build_store() do
-  #   data_path = Application.app_dir(:beans, "priv/data/#{@classification_filename}")
-  #   case File.exists?(data_path) do
-  #     true ->
-  #       GenServer.cast(__MODULE__, {:build_store, [data_path]})
-  #     _ ->
-  #       msg = "Could not parse classification file in path #{data_path}"
-  #       Logger.warn(msg)
-  #       {:error, msg}
-  #   end
-  # end
-  #
-  # def get_classification(bean_name) do
-  #   GenServer.call(__MODULE__, {:get_classification, [bean_name]})
-  # end
-  #
-  # def add_bean(bean_name, classification) do
-  #   Beans.Db.BeanClassification.add(bean_name, classification)
-  # end
-  #
-  # #Handlers
-  #
-  # def handle_cast({:build_store, [data_path]}, state) do
-  #   File.stream!(data_path)
-  #   |> Stream.filter(fn(line) -> !is_nil(line) end)
-  #   |> Stream.filter(fn(line) -> line != "" end)
-  #   |> Stream.map(fn(line) -> String.strip(line) end)
-  #   |> Stream.map(fn(line) -> line |> String.split(",") end)
-  #   |> Stream.filter(fn(list) -> list |> Enum.count >= 2 end)
-  #   |> Enum.each(fn(list) ->
-  #     key = list |> Enum.at(0) |> String.downcase
-  #     value = list |> Enum.at(1) |> String.downcase
-  #     GenServer.cast(__MODULE__, {:add_item_to_store, [key, value]})
-  #   end)
-  #   {:noreply, state}
-  # end
-  #
   def handle_cast({:drop_disc, [player_name, column_number]}, state) do
     column = state.board |> Enum.at(column_number) |> elem(1)
 
@@ -104,19 +64,6 @@ defmodule ConnectFour.Game do
 
     {:noreply, %{state | board: board}}
   end
-  #
-  # def handle_call({:get_classification, [bean_name]}, from, state) do
-  #   reply = case result = Beans.Db.BeanClassification.find_by_name(bean_name) do
-  #     [head|tail] ->
-  #       resp = result |> List.first |> Map.get(:classification)
-  #       {:ok, resp}
-  #     _ ->
-  #       {:error, "Classification not found"}
-  #   end
-  #
-  #   {:reply, reply, state}
-  # end
-
 
   #Private Helpers
   defp generate_default_board() do
