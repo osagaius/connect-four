@@ -94,4 +94,5 @@ defmodule ConnectFour.Game do
     rows = for n <- 0..(@board_rows-1), do: %{n => nil}
     rows |> Enum.reduce(fn(x, acc) -> Map.merge(x, acc) end)
   end
+  
 end
