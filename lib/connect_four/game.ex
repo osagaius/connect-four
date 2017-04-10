@@ -25,7 +25,23 @@ defmodule ConnectFour.Game do
   end
 
   #API
-  #
+  @doc """
+  Drops a disc into an available slot in the specified column.
+
+  The specified column should be a number between 1 and 7
+  """
+  def drop_disc(player_name \\ "default", column_number) do
+    internal_column_number = column_number-1
+    GenServer.cast(__MODULE__, {:drop_disc, [player_name, internal_column_number]})
+  end
+
+  @doc """
+  Resets the game board to its default state.
+  """
+  def reset_board() do
+    GenServer.cast(__MODULE__, {:reset_game_board})
+  end
+
   # @doc """
   # Primes the cache by parsing files in the `priv/data` directory
   # """
@@ -66,10 +82,28 @@ defmodule ConnectFour.Game do
   #   {:noreply, state}
   # end
   #
-  # def handle_cast({:add_item_to_store, [key, val]}, state) do
-  #   Beans.Db.BeanClassification.add(key, val)
-  #   {:noreply, state}
-  # end
+  def handle_cast({:drop_disc, [player_name, column_number]}, state) do
+    column = state.board |> Enum.at(column_number) |> elem(1)
+
+    available_slots = column |> Enum.filter(fn{k, v} -> v == nil end) |> Enum.into(%{})
+    board = case available_slots |> Enum.count do
+      0 ->
+        Logger.warn("No available slots in column #{column_number}")
+        state.board
+      _ ->
+        slot = available_slots |> Map.keys |> List.last
+        put_in(state.board[column_number][slot], player_name) |> Map.get(:board)
+    end
+    Logger.debug("Current game board #{inspect board}")
+
+    {:noreply, %{state | board: board}}
+  end
+
+  def handle_cast({:reset_game_board}, state) do
+    board = generate_default_board()
+
+    {:noreply, %{state | board: board}}
+  end
   #
   # def handle_call({:get_classification, [bean_name]}, from, state) do
   #   reply = case result = Beans.Db.BeanClassification.find_by_name(bean_name) do
@@ -94,5 +128,5 @@ defmodule ConnectFour.Game do
     rows = for n <- 0..(@board_rows-1), do: %{n => nil}
     rows |> Enum.reduce(fn(x, acc) -> Map.merge(x, acc) end)
   end
-  
+
 end
