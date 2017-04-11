@@ -12,7 +12,9 @@ defmodule ConnectFour.GameTest do
     {:ok, %{
       game_pid: game_pid,
       player_1: player_1,
-      player_2: player_2
+      player_2: player_2,
+      player_1_color: player_1_color,
+      player_2_color: player_2_color
     }}
   end
 
@@ -24,19 +26,19 @@ defmodule ConnectFour.GameTest do
   test "updates board after 1 drop", context do
     player_name = context.player_1
     column = 1
-    ConnectFour.Game.drop_disc(context.game_pid, player_name, column)
+    ConnectFour.Game.drop_disc(context.game_pid, :player_1, column)
     state = context.game_pid |> :sys.get_state
-    assert state |> Map.get(:board) |> Map.get(column - 1) |> Map.values |> List.last == player_name
+    assert state |> Map.get(:board) |> Map.get(column - 1) |> Map.values |> List.last == context.player_1_color
   end
 
   test "updates board after 2 drop", context do
     player_1 = context.player_1
     player_2 = context.player_2
     column = 1
-    ConnectFour.Game.drop_disc(context.game_pid, player_1, column)
-    ConnectFour.Game.drop_disc(context.game_pid, player_2, column)
+    ConnectFour.Game.drop_disc(context.game_pid, :player_1, column)
+    ConnectFour.Game.drop_disc(context.game_pid, :player_2, column)
     board = context.game_pid |> :sys.get_state |> Map.get(:board)
-    assert board[column-1][5] == player_1
-    assert board[column-1][4] == player_2
+    assert board[column-1][5] == context.player_1_color
+    assert board[column-1][4] == context.player_2_color
   end
 end

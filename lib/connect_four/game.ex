@@ -38,9 +38,9 @@ defmodule ConnectFour.Game do
 
   The specified column should be a number between 1 and 7
   """
-  def drop_disc(pid, player_name, column_number) do
+  def drop_disc(pid, player, column_number) do
     internal_column_number = column_number-1
-    GenServer.cast(pid, {:drop_disc, [player_name, internal_column_number]})
+    GenServer.cast(pid, {:drop_disc, [player, internal_column_number]})
   end
 
   @doc """
@@ -50,8 +50,12 @@ defmodule ConnectFour.Game do
     GenServer.cast(pid, {:reset_game_board})
   end
 
-  def handle_cast({:drop_disc, [player_name, column_number]}, state) do
-    Logger.debug("handle_cast drop_disc player_name=#{player_name}, column=#{column_number}")
+  def handle_cast({:drop_disc, [player, column_number]}, state) do
+    Logger.debug("handle_cast drop_disc player=#{player}, column=#{column_number}")
+    color = case player do
+      :player_1 -> state.player_1_color
+      :player_2 -> state.player_2_color
+    end
 
     column = state.board |> Enum.at(column_number) |> elem(1)
 
@@ -62,8 +66,10 @@ defmodule ConnectFour.Game do
         state.board
       _ ->
         slot = available_slots |> Map.keys |> List.last
-        put_in(state.board[column_number][slot], player_name) |> Map.get(:board)
+        put_in(state.board[column_number][slot], color) |> Map.get(:board)
     end
+
+    #TODO determine/update game state i.e. win/lose/tie etc.
 
     {:noreply, %{state | board: board}}
   end
