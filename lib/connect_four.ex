@@ -9,11 +9,23 @@ defmodule ConnectFour do
     # Define workers and child supervisors to be supervised
     children = [
       # Start the endpoint when the application starts
-      worker(ConnectFour.Game, []),
       supervisor(ConnectFour.Endpoint, []),
       # Start your own worker by calling: ConnectFour.Worker.start_link(arg1, arg2, arg3)
       # worker(ConnectFour.Worker, [arg1, arg2, arg3]),
     ]
+
+    workers = case mix_env() do
+      :test ->
+        [
+
+        ]
+      _ ->
+        [
+                    
+        ]
+    end
+
+    children = children ++ workers
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html
     # for other strategies and supported options
@@ -27,4 +39,6 @@ defmodule ConnectFour do
     ConnectFour.Endpoint.config_change(changed, removed)
     :ok
   end
+
+  def mix_env(), do: Application.get_env(:connect_four, :mix_env, :prod)
 end
