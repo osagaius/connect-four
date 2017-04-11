@@ -80,6 +80,7 @@ defmodule ConnectFour.Game do
     end
 
     Matrix.to_list(board) |> Matrix.print
+    Matrix.to_list(board) |> Matrix.transpose |> Matrix.print
 
     #TODO determine/update game state i.e. win/lose/tie etc.
     GenServer.cast(self(), {:update_status, [color, board, player]})
@@ -139,13 +140,24 @@ defmodule ConnectFour.Game do
 
   defp four_connected?(color, board) do
     cond do
-      !horizontal_win?(color, board) -> false
-      true -> true
+      horizontal_win?(color, board) ->
+        Logger.warn("vertical win")
+        true
+      vertical_win?(color, board) ->
+        Logger.warn("vertical win")
+        true
+      true -> false
     end
   end
 
   defp horizontal_win?(color, board) do
-    results = 0..@board_columns-1 |> Enum.to_list |> Enum.map(fn(column) ->
+    Matrix.to_list(board)
+    |> Matrix.transpose
+    |> Enum.any?(fn(list) -> list |> contains_four?(color) end)
+  end
+
+  defp vertical_win?(color, board) do
+    results = 0..@board_rows-1 |> Enum.to_list |> Enum.map(fn(column) ->
       win = board[column]
       |> Map.values
       |> Enum.filter(&(&1 == color))
@@ -155,12 +167,9 @@ defmodule ConnectFour.Game do
     results |> Enum.any?(&(&1))
   end
 
-  defp check_rows(column, color, board) do
-    results = 0..@board_rows-3 |> Enum.to_list |> Enum.map(fn(row) ->
-      board[column][row]
-    end)
-    Logger.warn("check_rows #{inspect results}")
-
-    results |> Enum.all?(&(&1 == color))
+  defp contains_four?(list, color) do
+    list
+    |> Enum.filter(&(&1 == color))
+    |> Enum.count == 4
   end
 end
