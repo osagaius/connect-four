@@ -157,14 +157,8 @@ defmodule ConnectFour.Game do
   end
 
   defp vertical_win?(color, board) do
-    results = 0..@board_rows-1 |> Enum.to_list |> Enum.map(fn(column) ->
-      win = board[column]
-      |> Map.values
-      |> Enum.filter(&(&1 == color))
-      |> Enum.count == 4
-    end)
-
-    results |> Enum.any?(&(&1))
+    Matrix.to_list(board)
+    |> Enum.any?(fn(list) -> list |> contains_four?(color) end)
   end
 
   defp contains_four?(list, color) do
