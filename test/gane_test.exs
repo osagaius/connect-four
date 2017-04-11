@@ -60,7 +60,7 @@ defmodule ConnectFour.GameTest do
     column = 1
     expected_status = %{status: :complete, winner: player}
 
-    for n <- 1..5, do: ConnectFour.Game.drop_disc(context.game_pid, :player_1, column)
+    for n <- 1..4, do: ConnectFour.Game.drop_disc(context.game_pid, :player_2, column)
 
     #sleep for 50 ms so the process state is updated
     :timer.sleep(50)
