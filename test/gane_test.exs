@@ -41,4 +41,19 @@ defmodule ConnectFour.GameTest do
     assert board[column-1][5] == context.player_1_color
     assert board[column-1][4] == context.player_2_color
   end
+
+  test "determine win - horizontal", context do
+    player_1 = context.player_1
+    column = 1
+    expected_status = %{status: :complete, winner: player_1}
+
+    for n <- 1..4, do: ConnectFour.Game.drop_disc(context.game_pid, :player_1, column)
+
+    #sleep for 50 ms so the process state is updated
+    :timer.sleep(50)
+
+    assert ConnectFour.Game.get_game_status(context.game_pid) == expected_status
+  end
+
+
 end

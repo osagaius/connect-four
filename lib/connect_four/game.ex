@@ -4,6 +4,7 @@ defmodule ConnectFour.Game do
   """
   use GenServer
   require Logger
+  alias ConnectFour.Matrix
   @board_columns 7
   @board_rows 6
 
@@ -26,7 +27,9 @@ defmodule ConnectFour.Game do
     board = generate_default_board()
 
     state = %{
-      board: board
+      board: board,
+      status: nil,
+      winner: nil
     } |> Map.merge(get_player_opts_map(opts))
 
     {:ok, state}
@@ -50,6 +53,13 @@ defmodule ConnectFour.Game do
     GenServer.cast(pid, {:reset_game_board})
   end
 
+  @doc """
+  Gets the current status of the game.
+  """
+  def get_game_status(pid) do
+    GenServer.call(pid, {:get_game_status})
+  end
+
   def handle_cast({:drop_disc, [player, column_number]}, state) do
     Logger.debug("handle_cast drop_disc player=#{player}, column=#{column_number}")
     color = case player do
@@ -69,7 +79,10 @@ defmodule ConnectFour.Game do
         put_in(state.board[column_number][slot], color) |> Map.get(:board)
     end
 
+    Matrix.to_list(board) |> Matrix.print
+
     #TODO determine/update game state i.e. win/lose/tie etc.
+    GenServer.cast(self(), {:update_status, [color, board, player]})
 
     {:noreply, %{state | board: board}}
   end
@@ -80,8 +93,23 @@ defmodule ConnectFour.Game do
     {:noreply, %{state | board: board}}
   end
 
-  def get_game_process_name(player_1, player_2) do
-    "#{__MODULE__}-#{player_1}v#{player_2}" |> String.to_atom
+  def handle_cast({:update_status, [color, board, player]}, state) do
+    player_name = case player do
+      :player_1 -> state.player_1
+      :player_2 -> state.player_2
+    end
+
+    {status, winner} = case four_connected?(color, board) do
+      true -> {:complete, player_name}
+      false -> {nil, nil}
+    end
+
+    {:noreply, %{state | status: status, winner: winner}}
+  end
+
+  def handle_call({:get_game_status}, from, state) do
+    reply = %{status: state.status, winner: state.winner}
+    {:reply, reply, state}
   end
 
   #Private Helpers
@@ -105,4 +133,34 @@ defmodule ConnectFour.Game do
     game_opts |> Enum.into(%{})
   end
 
+  defp get_game_process_name(player_1, player_2) do
+    "#{__MODULE__}-#{player_1}v#{player_2}" |> String.to_atom
+  end
+
+  defp four_connected?(color, board) do
+    cond do
+      !horizontal_win?(color, board) -> false
+      true -> true
+    end
+  end
+
+  defp horizontal_win?(color, board) do
+    results = 0..@board_columns-1 |> Enum.to_list |> Enum.map(fn(column) ->
+      win = board[column]
+      |> Map.values
+      |> Enum.filter(&(&1 == color))
+      |> Enum.count == 4
+    end)
+
+    results |> Enum.any?(&(&1))
+  end
+
+  defp check_rows(column, color, board) do
+    results = 0..@board_rows-3 |> Enum.to_list |> Enum.map(fn(row) ->
+      board[column][row]
+    end)
+    Logger.warn("check_rows #{inspect results}")
+
+    results |> Enum.all?(&(&1 == color))
+  end
 end
