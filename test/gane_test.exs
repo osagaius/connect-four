@@ -31,7 +31,7 @@ defmodule ConnectFour.GameTest do
     assert state |> Map.get(:board) |> Map.get(column - 1) |> Map.values |> List.last == context.player_1_color
   end
 
-  test "updates board after 2 drop", context do
+  test "updates board after 2 drops", context do
     player_1 = context.player_1
     player_2 = context.player_2
     column = 1
