@@ -36,6 +36,7 @@ defmodule ConnectFour.GameTest do
     ConnectFour.Game.drop_disc(context.game_pid, :player_1, column)
     state = context.game_pid |> :sys.get_state
     assert state |> Map.get(:board) |> Map.get(column - 1) |> Map.values |> List.last == context.player_1_color
+    assert state.turn == :player_2
   end
 
   test "updates board after 2 drops", context do
@@ -44,9 +45,11 @@ defmodule ConnectFour.GameTest do
     column = 1
     ConnectFour.Game.drop_disc(context.game_pid, :player_1, column)
     ConnectFour.Game.drop_disc(context.game_pid, :player_2, column)
-    board = context.game_pid |> :sys.get_state |> Map.get(:board)
+    state = context.game_pid |> :sys.get_state
+    board = state |> Map.get(:board)
     assert board[column-1][5] == context.player_1_color
     assert board[column-1][4] == context.player_2_color
+    assert state.turn == :player_1
   end
 
   test "determine win - horizontal", context do
