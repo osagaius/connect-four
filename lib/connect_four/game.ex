@@ -26,6 +26,8 @@ defmodule ConnectFour.Game do
       winner: nil
     }
 
+    IO.puts "Turn: #{state.turn}"
+
     {:ok, state}
   end
 
@@ -37,8 +39,14 @@ defmodule ConnectFour.Game do
   The specified column should be a number between 1 and 7
   """
   def drop_disc(pid, column_number) do
-    internal_column_number = column_number-1
-    GenServer.cast(pid, {:drop_disc, [internal_column_number]})
+    valid_columns = 1..@board_columns |> Enum.to_list
+    cond do
+      !Enum.member?(valid_columns, column_number) ->
+        Logger.warn("Invalid column number. Try on of these #{inspect valid_columns}")
+      true ->
+        internal_column_number = column_number-1
+        GenServer.cast(pid, {:drop_disc, [internal_column_number]})
+    end
   end
 
   @doc """
@@ -84,27 +92,39 @@ defmodule ConnectFour.Game do
     Logger.debug("handle_cast drop_disc player=#{player}, column=#{column_number}")
     color = get_player_color(player)
 
-    column = state.board |> Enum.at(column_number) |> elem(1)
+    state = case state.status do
+      nil ->
+        column = state.board |> Enum.at(column_number) |> elem(1)
 
-    available_slots = column |> Enum.filter(fn{k, v} -> v == nil end) |> Enum.into(%{})
-    board = case available_slots |> Enum.count do
-      0 ->
-        Logger.warn("No available slots in column #{column_number}")
-        state.board
+        available_slots = column |> Enum.filter(fn{k, v} -> v == nil end) |> Enum.into(%{})
+        board = case available_slots |> Enum.count do
+          0 ->
+            Logger.warn("No available slots in column #{column_number}")
+            state.board
+          _ ->
+            slot = available_slots |> Map.keys |> List.last
+            put_in(state.board[column_number][slot], color) |> Map.get(:board)
+        end
+
+        #print turn info
+        turn = get_turn(player)
+
+        #print board
+        IO.puts "Current board"
+        #Matrix.to_list(board) |> Matrix.print
+        Matrix.to_list(board) |> Matrix.transpose |> Matrix.print
+
+        IO.puts "Turn: #{turn}"
+
+        #TODO determine/update game state i.e. win/lose/tie etc.
+        GenServer.cast(self(), {:update_status, [color, board, player]})
+        %{state | board: board, turn: turn}
       _ ->
-        slot = available_slots |> Map.keys |> List.last
-        put_in(state.board[column_number][slot], color) |> Map.get(:board)
+        Logger.warn("Game state is #{state.status} and no action can be taken")
+        state
     end
 
-    Matrix.to_list(board) |> Matrix.print
-    Matrix.to_list(board) |> Matrix.transpose |> Matrix.print
-
-    turn = get_turn(player)
-
-    #TODO determine/update game state i.e. win/lose/tie etc.
-    GenServer.cast(self(), {:update_status, [color, board, player]})
-
-    {:noreply, %{state | board: board, turn: turn}}
+    {:noreply, state}
   end
 
   def handle_cast({:reset_game_board}, state) do
@@ -120,8 +140,11 @@ defmodule ConnectFour.Game do
   def handle_cast({:update_status, [color, board, player]}, state) do
     {status, winner} = cond do
       count_empty_spaces(board) == 0 ->
-        {:tie, nil}
-      four_connected?(color, board) -> {:complete, player}
+        Logger.info "GAME OVER : tie"
+        {:tied, nil}
+      four_connected?(color, board) ->
+        Logger.info "GAME OVER : #{player} has won"
+        {:complete, player}
       true -> {nil, nil}
     end
 
