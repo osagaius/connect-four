@@ -139,7 +139,7 @@ defmodule ConnectFour.GameTest do
   end
 
   test "status should be a tie", context do
-    expected_status = %{status: :tie, winner: nil}
+    expected_status = %{status: :tied, winner: nil}
 
     board = [
       [nil, "blue", "red", "blue", "red", "blue", "red"],
