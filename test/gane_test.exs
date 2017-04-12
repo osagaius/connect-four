@@ -126,4 +126,27 @@ defmodule ConnectFour.GameTest do
     assert ConnectFour.Game.get_game_status(context.game_pid) == expected_status
   end
 
+  test "status should be a tie", context do
+    expected_status = %{status: :tie, winner: nil}
+
+    board = [
+      [nil, "blue", "red", "blue", "red", "blue", "red"],
+      ["blue", "red", "blue", "red", "blue", "red", "blue"],
+      ["red", "blue", "red", "blue", "red", "blue", "red"],
+      ["blue", "red", "blue", "red", "blue", "red", "blue"],
+      ["red", "blue", "red", "blue", "red", "blue", "red"],
+      ["blue", "red", "blue", "red", "blue", "red", "blue"]
+    ] |> ConnectFour.Matrix.from_list
+
+    ConnectFour.Game.set_board(context.game_pid, board)
+
+    #place red in the top left
+    ConnectFour.Game.drop_disc(context.game_pid, :player_1, 1)
+
+    #sleep for 50 seconds so the game state is updated
+    :timer.sleep(50)
+
+    assert ConnectFour.Game.get_game_status(context.game_pid) == expected_status
+  end
+
 end

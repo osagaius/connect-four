@@ -54,6 +54,13 @@ defmodule ConnectFour.Game do
   end
 
   @doc """
+  Set the game board to the specified board.
+  """
+  def set_board(pid, board) do
+    GenServer.cast(pid, {:set_game_board, [board]})
+  end
+
+  @doc """
   Gets the current status of the game.
   """
   def get_game_status(pid) do
@@ -94,15 +101,21 @@ defmodule ConnectFour.Game do
     {:noreply, %{state | board: board}}
   end
 
+  def handle_cast({:set_game_board, [board]}, state) do
+    {:noreply, %{state | board: board}}
+  end
+
   def handle_cast({:update_status, [color, board, player]}, state) do
     player_name = case player do
       :player_1 -> state.player_1
       :player_2 -> state.player_2
     end
 
-    {status, winner} = case four_connected?(color, board) do
-      true -> {:complete, player_name}
-      false -> {nil, nil}
+    {status, winner} = cond do
+      count_empty_spaces(board) == 0 ->
+        {:tie, nil}
+      four_connected?(color, board) -> {:complete, player_name}
+      true -> {nil, nil}
     end
 
     {:noreply, %{state | status: status, winner: winner}}
@@ -213,5 +226,12 @@ defmodule ConnectFour.Game do
     end)
 
     results |> Enum.any?(&(&1))
+  end
+
+  defp count_empty_spaces(board) do
+    Matrix.to_list(board)
+    |> List.flatten
+    |> Enum.filter(&(&1 == nil))
+    |> Enum.count
   end
 end
