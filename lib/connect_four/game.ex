@@ -30,8 +30,19 @@ defmodule ConnectFour.Game do
   end
 
   #API
+
   @doc """
   Drops a disc into an available slot in the specified column.
+
+  The specified column should be a number between 1 and 7
+  """
+  def drop_disc(pid, column_number) do
+    internal_column_number = column_number-1
+    GenServer.cast(pid, {:drop_disc, [internal_column_number]})
+  end
+
+  @doc """
+  Drops a disc into an available slot in the specified column, for the specified player.
 
   The specified column should be a number between 1 and 7
   """
@@ -62,6 +73,12 @@ defmodule ConnectFour.Game do
   end
 
   #Handlers
+
+  def handle_cast({:drop_disc, [column_number]}, state) do
+    player = state.turn
+    GenServer.cast(self(), {:drop_disc, [player, column_number]})
+    {:noreply, state}
+  end
 
   def handle_cast({:drop_disc, [player, column_number]}, state) do
     Logger.debug("handle_cast drop_disc player=#{player}, column=#{column_number}")
