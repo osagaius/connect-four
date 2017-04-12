@@ -10,10 +10,6 @@ defmodule ConnectFour.Game do
 
   # Startup and Initialization
   def start_link(opts \\ []) do
-    #TODO Support multiple game processes running simulteaneously for the same players
-    #TODO Name the games based on some unique identifier i.e. UUID
-    #TODO Excise usage of player names
-
     game_id = UUID.uuid1()
     name = get_game_process_name(game_id)
     GenServer.start_link(__MODULE__, opts, name: name)
