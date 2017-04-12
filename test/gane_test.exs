@@ -33,7 +33,9 @@ defmodule ConnectFour.GameTest do
   test "updates board after 1 drop", context do
     player_name = context.player_1
     column = 1
-    ConnectFour.Game.drop_disc(context.game_pid, :player_1, column)
+    ConnectFour.Game.drop_disc(context.game_pid, column)
+    #sleep for 50 seconds so message is sent and handled
+    :timer.sleep(50)
     state = context.game_pid |> :sys.get_state
     assert state |> Map.get(:board) |> Map.get(column - 1) |> Map.values |> List.last == context.player_1_color
     assert state.turn == :player_2
