@@ -82,10 +82,12 @@ defmodule ConnectFour.Game do
     Matrix.to_list(board) |> Matrix.print
     Matrix.to_list(board) |> Matrix.transpose |> Matrix.print
 
+    turn = get_turn(player)
+
     #TODO determine/update game state i.e. win/lose/tie etc.
     GenServer.cast(self(), {:update_status, [color, board, player]})
 
-    {:noreply, %{state | board: board}}
+    {:noreply, %{state | board: board, turn: turn}}
   end
 
   def handle_cast({:reset_game_board}, state) do
@@ -115,7 +117,7 @@ defmodule ConnectFour.Game do
   end
 
   #Private Helpers
-  
+
   defp generate_default_board() do
     board_columns = for n <- 0..(@board_columns-1), do: %{n => generate_default_board_rows()}
     board_columns |> Enum.reduce(fn(x, acc) -> Map.merge(x, acc) end)
@@ -218,6 +220,13 @@ defmodule ConnectFour.Game do
     case player do
       :player_1 -> "red"
       :player_2 -> "blue"
+    end
+  end
+
+  defp get_turn(current) do
+    case current do
+      :player_1 -> :player_2
+      :player_2 -> :player_1
     end
   end
 end
