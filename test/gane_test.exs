@@ -1,5 +1,6 @@
 defmodule ConnectFour.GameTest do
   use ExUnit.Case
+  require Logger
 
   setup do
     player_1 = "player_1-#{:os.system_time(:seconds)}"
@@ -7,7 +8,14 @@ defmodule ConnectFour.GameTest do
     player_1_color = "red"
     player_2_color = "blue"
     game_opts = [player_1: player_1, player_2: player_2, player_1_color: player_1_color, player_2_color: player_2_color]
-    {:ok, game_pid} = ConnectFour.Game.start_link(game_opts)
+
+    game_pid = case result = ConnectFour.Game.start_link(game_opts) do
+      {:error, {:already_started, pid}} -> pid
+      {:ok, pid} -> pid
+      _ ->
+        Logger.warn("couldn't start process result=#{inspect result}")
+        nil
+    end
 
     {:ok, %{
       game_pid: game_pid,
@@ -68,5 +76,54 @@ defmodule ConnectFour.GameTest do
     assert ConnectFour.Game.get_game_status(context.game_pid) == expected_status
   end
 
+  test "determine win - ascending diagonal", context do
+    player = context.player_2
+    column = 1
+    expected_status = %{status: :complete, winner: player}
+
+    ConnectFour.Game.drop_disc(context.game_pid, :player_2, 1)
+
+    ConnectFour.Game.drop_disc(context.game_pid, :player_1, 2)
+    ConnectFour.Game.drop_disc(context.game_pid, :player_2, 2)
+
+    ConnectFour.Game.drop_disc(context.game_pid, :player_2, 3)
+    ConnectFour.Game.drop_disc(context.game_pid, :player_1, 3)
+    ConnectFour.Game.drop_disc(context.game_pid, :player_2, 3)
+
+    ConnectFour.Game.drop_disc(context.game_pid, :player_1, 4)
+    ConnectFour.Game.drop_disc(context.game_pid, :player_2, 4)
+    ConnectFour.Game.drop_disc(context.game_pid, :player_1, 4)
+    ConnectFour.Game.drop_disc(context.game_pid, :player_2, 4)
+
+    #sleep for 50 ms so the process state is updated
+    :timer.sleep(50)
+
+    assert ConnectFour.Game.get_game_status(context.game_pid) == expected_status
+  end
+
+  test "determine win - descending diagonal", context do
+    player = context.player_2
+    column = 1
+    expected_status = %{status: :complete, winner: player}
+
+    ConnectFour.Game.drop_disc(context.game_pid, :player_2, 7)
+
+    ConnectFour.Game.drop_disc(context.game_pid, :player_1, 6)
+    ConnectFour.Game.drop_disc(context.game_pid, :player_2, 6)
+
+    ConnectFour.Game.drop_disc(context.game_pid, :player_2, 5)
+    ConnectFour.Game.drop_disc(context.game_pid, :player_1, 5)
+    ConnectFour.Game.drop_disc(context.game_pid, :player_2, 5)
+
+    ConnectFour.Game.drop_disc(context.game_pid, :player_1, 4)
+    ConnectFour.Game.drop_disc(context.game_pid, :player_2, 4)
+    ConnectFour.Game.drop_disc(context.game_pid, :player_1, 4)
+    ConnectFour.Game.drop_disc(context.game_pid, :player_2, 4)
+
+    #sleep for 50 ms so the process state is updated
+    :timer.sleep(50)
+
+    assert ConnectFour.Game.get_game_status(context.game_pid) == expected_status
+  end
 
 end
