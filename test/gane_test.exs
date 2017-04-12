@@ -62,7 +62,9 @@ defmodule ConnectFour.GameTest do
     #sleep for 50 ms so the process state is updated
     :timer.sleep(50)
 
-    assert ConnectFour.Game.get_game_status(context.game_pid) == expected_status
+    game_status = ConnectFour.Game.get_game_status(context.game_pid)
+    assert game_status.status == expected_status.status
+    assert game_status.winner == expected_status.winner
   end
 
   test "determine win - vertical", context do
@@ -75,7 +77,9 @@ defmodule ConnectFour.GameTest do
     #sleep for 50 ms so the process state is updated
     :timer.sleep(50)
 
-    assert ConnectFour.Game.get_game_status(context.game_pid) == expected_status
+    game_status = ConnectFour.Game.get_game_status(context.game_pid)
+    assert game_status.status == expected_status.status
+    assert game_status.winner == expected_status.winner
   end
 
   test "determine win - ascending diagonal", context do
@@ -100,7 +104,9 @@ defmodule ConnectFour.GameTest do
     #sleep for 50 ms so the process state is updated
     :timer.sleep(50)
 
-    assert ConnectFour.Game.get_game_status(context.game_pid) == expected_status
+    game_status = ConnectFour.Game.get_game_status(context.game_pid)
+    assert game_status.status == expected_status.status
+    assert game_status.winner == expected_status.winner
   end
 
   test "determine win - descending diagonal", context do
@@ -125,7 +131,9 @@ defmodule ConnectFour.GameTest do
     #sleep for 50 ms so the process state is updated
     :timer.sleep(50)
 
-    assert ConnectFour.Game.get_game_status(context.game_pid) == expected_status
+    game_status = ConnectFour.Game.get_game_status(context.game_pid)
+    assert game_status.status == expected_status.status
+    assert game_status.winner == expected_status.winner
   end
 
   test "status should be a tie", context do
@@ -148,7 +156,9 @@ defmodule ConnectFour.GameTest do
     #sleep for 50 seconds so the game state is updated
     :timer.sleep(50)
 
-    assert ConnectFour.Game.get_game_status(context.game_pid) == expected_status
+    game_status = ConnectFour.Game.get_game_status(context.game_pid)
+    assert game_status.status == expected_status.status
+    assert game_status.winner == expected_status.winner
   end
 
 end
