@@ -3,13 +3,12 @@ defmodule ConnectFour.GameTest do
   require Logger
 
   setup do
-    player_1 = "player_1-#{:os.system_time(:seconds)}"
-    player_2 = "player_2-#{:os.system_time(:seconds)}"
+    player_1 = :player_1
+    player_2 = :player_2
     player_1_color = "red"
     player_2_color = "blue"
-    game_opts = [player_1: player_1, player_2: player_2, player_1_color: player_1_color, player_2_color: player_2_color]
 
-    game_pid = case result = ConnectFour.Game.start_link(game_opts) do
+    game_pid = case result = ConnectFour.Game.start_link do
       {:error, {:already_started, pid}} -> pid
       {:ok, pid} -> pid
       _ ->
