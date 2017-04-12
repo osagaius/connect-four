@@ -141,16 +141,16 @@ defmodule ConnectFour.Game do
   defp four_connected?(color, board) do
     cond do
       horizontal_win?(color, board) ->
-        Logger.warn("horizontal win")
+        Logger.debug("horizontal win")
         true
       vertical_win?(color, board) ->
-        Logger.warn("vertical win")
+        Logger.debug("vertical win")
         true
       ascending_diagnonal_win?(color, board) ->
-        Logger.warn("ascending diagnonal win")
+        Logger.debug("ascending diagnonal win")
         true
       descending_diagnonal_win?(color, board) ->
-        Logger.warn("descending diagnonal win")
+        Logger.debug("descending diagnonal win")
         true
       true -> false
     end
