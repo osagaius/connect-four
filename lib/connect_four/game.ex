@@ -112,7 +112,7 @@ defmodule ConnectFour.Game do
   end
 
   def handle_call({:get_game_status}, from, state) do
-    reply = %{status: state.status, winner: state.winner}
+    reply = state
     {:reply, reply, state}
   end
 
