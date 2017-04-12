@@ -11,6 +11,8 @@ defmodule ConnectFour.Game do
   # Startup and Initialization
   def start_link(opts \\ []) do
     #TODO Support multiple game processes running simulteaneously for the same players
+    #TODO Name the games based on some unique identifier i.e. UUID
+    #TODO Excise usage of player names
     opts_map = get_player_opts_map(opts)
 
     case opts_map |> Map.values |> Enum.all?(&(&1 != nil)) do
