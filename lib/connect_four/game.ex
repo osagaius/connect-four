@@ -13,15 +13,10 @@ defmodule ConnectFour.Game do
     #TODO Support multiple game processes running simulteaneously for the same players
     #TODO Name the games based on some unique identifier i.e. UUID
     #TODO Excise usage of player names
-    opts_map = get_player_opts_map(opts)
 
-    case opts_map |> Map.values |> Enum.all?(&(&1 != nil)) do
-      true ->
-        name = get_game_process_name(opts_map.player_1, opts_map.player_2)
-        GenServer.start_link(__MODULE__, opts, name: name)
-      _ ->
-        Logger.warn("#{__MODULE__} error: both player names required to start game")
-    end
+    game_id = UUID.uuid1()
+    name = get_game_process_name(game_id)
+    GenServer.start_link(__MODULE__, opts, name: name)
   end
 
   def init(opts) do
@@ -31,8 +26,9 @@ defmodule ConnectFour.Game do
     state = %{
       board: board,
       status: nil,
+      turn: :player_1,
       winner: nil
-    } |> Map.merge(get_player_opts_map(opts))
+    }
 
     {:ok, state}
   end
@@ -71,10 +67,7 @@ defmodule ConnectFour.Game do
 
   def handle_cast({:drop_disc, [player, column_number]}, state) do
     Logger.debug("handle_cast drop_disc player=#{player}, column=#{column_number}")
-    color = case player do
-      :player_1 -> state.player_1_color
-      :player_2 -> state.player_2_color
-    end
+    color = get_player_color(player)
 
     column = state.board |> Enum.at(column_number) |> elem(1)
 
@@ -108,15 +101,10 @@ defmodule ConnectFour.Game do
   end
 
   def handle_cast({:update_status, [color, board, player]}, state) do
-    player_name = case player do
-      :player_1 -> state.player_1
-      :player_2 -> state.player_2
-    end
-
     {status, winner} = cond do
       count_empty_spaces(board) == 0 ->
         {:tie, nil}
-      four_connected?(color, board) -> {:complete, player_name}
+      four_connected?(color, board) -> {:complete, player}
       true -> {nil, nil}
     end
 
@@ -139,18 +127,8 @@ defmodule ConnectFour.Game do
     rows |> Enum.reduce(fn(x, acc) -> Map.merge(x, acc) end)
   end
 
-  defp get_player_opts_map(opts) do
-    player_1 = opts[:player_1]
-    player_2 = opts[:player_2]
-    player_1_color = opts[:player_1_color]
-    player_2_color = opts[:player_2_color]
-
-    game_opts = [player_1: player_1, player_2: player_2, player_1_color: player_1_color, player_2_color: player_2_color]
-    game_opts |> Enum.into(%{})
-  end
-
-  def get_game_process_name(player_1, player_2) do
-    "#{__MODULE__}-#{player_1}v#{player_2}" |> String.to_atom
+  def get_game_process_name(id) do
+    "#{__MODULE__}-#{id}" |> String.to_atom
   end
 
   defp four_connected?(color, board) do
@@ -235,5 +213,12 @@ defmodule ConnectFour.Game do
     |> List.flatten
     |> Enum.filter(&(&1 == nil))
     |> Enum.count
+  end
+
+  defp get_player_color(player) do
+    case player do
+      :player_1 -> "red"
+      :player_2 -> "blue"
+    end
   end
 end
