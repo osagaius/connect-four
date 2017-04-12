@@ -134,7 +134,7 @@ defmodule ConnectFour.Game do
     game_opts |> Enum.into(%{})
   end
 
-  defp get_game_process_name(player_1, player_2) do
+  def get_game_process_name(player_1, player_2) do
     "#{__MODULE__}-#{player_1}v#{player_2}" |> String.to_atom
   end
 
@@ -145,6 +145,12 @@ defmodule ConnectFour.Game do
         true
       vertical_win?(color, board) ->
         Logger.warn("vertical win")
+        true
+      ascending_diagnonal_win?(color, board) ->
+        Logger.warn("ascending diagnonal win")
+        true
+      descending_diagnonal_win?(color, board) ->
+        Logger.warn("descending diagnonal win")
         true
       true -> false
     end
@@ -161,9 +167,51 @@ defmodule ConnectFour.Game do
     |> Enum.any?(fn(list) -> list |> contains_four?(color) end)
   end
 
+  defp ascending_diagnonal_win?(color, board) do
+    results = 2..@board_columns-1 |> Enum.to_list |> Enum.map(fn(i) ->
+      check_rows_ascending(i, board, color)
+    end)
+
+    results |> Enum.any?(&(&1))
+  end
+
+  defp descending_diagnonal_win?(color, board) do
+    results = 2..@board_columns-1 |> Enum.to_list |> Enum.map(fn(i) ->
+      check_rows_descending(i, board, color)
+    end)
+
+    results |> Enum.any?(&(&1))
+  end
+
   defp contains_four?(list, color) do
     list
     |> Enum.filter(&(&1 == color))
     |> Enum.count == 4
+  end
+
+  defp check_rows_ascending(column, board, color) do
+    results = 0..@board_rows-3 |> Enum.to_list |> Enum.map(fn(row) ->
+      [
+        board[column][row],
+        board[column-1][row+1],
+        board[column-2][row+2],
+        board[column-3][row+3]
+      ] |> Enum.all?(&(&1) == color)
+    end)
+
+    results |> Enum.any?(&(&1))
+  end
+
+  defp check_rows_descending(column, board, color) do
+    results = 2..@board_rows-1 |> Enum.to_list |> Enum.map(fn(row) ->
+      [
+        board[column][row],
+        board[column-1][row-1],
+        board[column-2][row-2],
+        board[column-3][row-3]
+      ] |> Enum.all?(&(&1) == color)
+    end)
+
+    results |> Enum.any?(&(&1))
   end
 end
