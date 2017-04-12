@@ -61,6 +61,8 @@ defmodule ConnectFour.Game do
     GenServer.call(pid, {:get_game_status})
   end
 
+  #Handlers
+
   def handle_cast({:drop_disc, [player, column_number]}, state) do
     Logger.debug("handle_cast drop_disc player=#{player}, column=#{column_number}")
     color = get_player_color(player)
@@ -113,6 +115,7 @@ defmodule ConnectFour.Game do
   end
 
   #Private Helpers
+  
   defp generate_default_board() do
     board_columns = for n <- 0..(@board_columns-1), do: %{n => generate_default_board_rows()}
     board_columns |> Enum.reduce(fn(x, acc) -> Map.merge(x, acc) end)
