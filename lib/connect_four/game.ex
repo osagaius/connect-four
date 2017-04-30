@@ -18,13 +18,25 @@ defmodule ConnectFour.Game do
   def init(opts) do
     Logger.debug("#{__MODULE__} starting...")
     board = generate_default_board()
+    mode = opts[:mode]
 
     state = %{
       board: board,
       status: nil,
       turn: :player_1,
-      winner: nil
+      winner: nil,
+      mode: mode
     }
+
+    case mode do
+      :single_player ->
+        # make the initial move as the AI,
+        # in the center column
+        __MODULE__.drop_disc(self(), 4)
+      _ ->
+        #don't do anything
+        nil
+    end
 
     IO.puts "Turn: #{state.turn}"
 
@@ -94,17 +106,7 @@ defmodule ConnectFour.Game do
 
     state = case state.status do
       nil ->
-        column = state.board |> Enum.at(column_number) |> elem(1)
-
-        available_slots = column |> Enum.filter(fn{k, v} -> v == nil end) |> Enum.into(%{})
-        board = case available_slots |> Enum.count do
-          0 ->
-            Logger.warn("No available slots in column #{column_number}")
-            state.board
-          _ ->
-            slot = available_slots |> Map.keys |> List.last
-            put_in(state.board[column_number][slot], color) |> Map.get(:board)
-        end
+        board = update_board(column_number, color, state.board)
 
         #print turn info
         turn = get_turn(player)
@@ -118,6 +120,14 @@ defmodule ConnectFour.Game do
 
         #TODO determine/update game state i.e. win/lose/tie etc.
         GenServer.cast(self(), {:update_status, [color, board, player]})
+
+        # make a move if it is the computer's turn
+        case state.mode == :single_player && turn == :player_1 do
+          true ->
+            make_move_0(self(), state)
+          _ -> nil
+        end
+
         %{state | board: board, turn: turn}
       _ ->
         Logger.warn("Game state is #{state.status} and no action can be taken")
@@ -157,6 +167,61 @@ defmodule ConnectFour.Game do
   end
 
   #Private Helpers
+  defp make_move_0(game_pid, state) do
+    # find threats (possible wins for the other player)
+    opponent_wins = find_wins(get_player_color(:player_2), state.board)
+
+    # take first threat
+    threat_column_number = case opponent_wins do
+      [head|tail] -> head + 1
+      _ -> nil
+    end
+
+    # find wins for self
+    self_wins = find_wins(get_player_color(:player_1), state.board)
+
+    # take first win
+    self_win_column_number = case self_wins do
+      [head|tail] -> head + 1
+      _ -> nil
+    end
+
+    # block a threat, execute a self-win, or use a random column
+    column = (threat_column_number || self_win_column_number || :rand.uniform(@board_columns))
+
+    __MODULE__.drop_disc(game_pid, column)
+
+  end
+
+  defp find_wins(color, board) do
+    # updates the board by dropping a disc
+    # in each column and checks if a win exists
+    # if a win exists, return the columns
+    boards = for n <- 0..(@board_columns-1), do: {n, update_board(n, color, board)}
+
+    Logger.warn "boards with color #{color} #{inspect boards}"
+
+    boards
+    |> Enum.filter(fn{col, board} -> four_connected?(color, board) end)
+    |> Enum.map(fn{col, board} -> col end)
+  end
+
+  defp update_board(column_number, color, board) do
+    Logger.warn("attempting to update board col=#{column_number},color=#{color},board=#{inspect board}")
+    column = board |> Enum.at(column_number) |> elem(1)
+
+    available_slots = column |> Enum.filter(fn{k, v} -> v == nil end) |> Enum.into(%{})
+
+    case available_slots |> Enum.count do
+      0 ->
+        Logger.warn("No available slots in column #{column_number}")
+        board
+      _ ->
+        slot = available_slots |> Map.keys |> List.last
+        put_in(board[column_number][slot], color)
+    end
+
+  end
 
   defp generate_default_board() do
     board_columns = for n <- 0..(@board_columns-1), do: %{n => generate_default_board_rows()}
@@ -168,7 +233,7 @@ defmodule ConnectFour.Game do
     rows |> Enum.reduce(fn(x, acc) -> Map.merge(x, acc) end)
   end
 
-  def get_game_process_name(id) do
+  defp get_game_process_name(id) do
     "#{__MODULE__}-#{id}" |> String.to_atom
   end
 
@@ -219,8 +284,12 @@ defmodule ConnectFour.Game do
 
   defp contains_four?(list, color) do
     list
-    |> Enum.filter(&(&1 == color))
-    |> Enum.count == 4
+    |> Enum.chunk_by(fn arg -> arg end)
+    |> Enum.any?(fn(chunk) ->
+      chunk
+      |> Enum.filter(&(&1 == color))
+      |> Enum.count == 4
+    end)
   end
 
   defp check_rows_ascending(column, board, color) do
