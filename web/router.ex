@@ -17,6 +17,7 @@ defmodule ConnectFour.Router do
     pipe_through :api
 
     post "/game", ConnectFour.GameController, :create
+    post "/game/make_move", ConnectFour.GameController, :make_move
   end
 
   scope "/", ConnectFour do
