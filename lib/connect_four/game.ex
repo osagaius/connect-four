@@ -124,7 +124,7 @@ defmodule ConnectFour.Game do
         # make a move if it is the computer's turn
         case state.mode == :single_player && turn == :player_1 do
           true ->
-            make_move_0(self(), state)
+            make_move_0(self(), board)
           _ -> nil
         end
 
@@ -167,9 +167,9 @@ defmodule ConnectFour.Game do
   end
 
   #Private Helpers
-  defp make_move_0(game_pid, state) do
+  defp make_move_0(game_pid, board) do
     # find threats (possible wins for the other player)
-    opponent_wins = find_wins(get_player_color(:player_2), state.board)
+    opponent_wins = find_wins(get_player_color(:player_2), board)
 
     # take first threat
     threat_column_number = case opponent_wins do
@@ -178,7 +178,7 @@ defmodule ConnectFour.Game do
     end
 
     # find wins for self
-    self_wins = find_wins(get_player_color(:player_1), state.board)
+    self_wins = find_wins(get_player_color(:player_1), board)
 
     # take first win
     self_win_column_number = case self_wins do
@@ -199,7 +199,6 @@ defmodule ConnectFour.Game do
     # if a win exists, return the columns
     boards = for n <- 0..(@board_columns-1), do: {n, update_board(n, color, board)}
 
-    Logger.warn "boards with color #{color} #{inspect boards}"
 
     boards
     |> Enum.filter(fn{col, board} -> four_connected?(color, board) end)
@@ -207,7 +206,6 @@ defmodule ConnectFour.Game do
   end
 
   defp update_board(column_number, color, board) do
-    Logger.warn("attempting to update board col=#{column_number},color=#{color},board=#{inspect board}")
     column = board |> Enum.at(column_number) |> elem(1)
 
     available_slots = column |> Enum.filter(fn{k, v} -> v == nil end) |> Enum.into(%{})
