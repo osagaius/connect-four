@@ -12,7 +12,7 @@ defmodule ConnectFour.Game do
   def start_link(opts \\ []) do
     game_id = UUID.uuid1()
     name = get_game_process_name(game_id)
-    GenServer.start_link(__MODULE__, opts, name: name)
+    GenServer.start_link(__MODULE__, opts |> Keyword.put(:game_id, game_id), name: name)
   end
 
   def init(opts) do
@@ -25,7 +25,9 @@ defmodule ConnectFour.Game do
       status: nil,
       turn: :player_1,
       winner: nil,
-      mode: mode
+      mode: mode,
+      player: 1,
+      game_id: opts[:game_id]
     }
 
     case mode do
@@ -92,6 +94,10 @@ defmodule ConnectFour.Game do
     GenServer.call(pid, {:get_game_status})
   end
 
+  def get_game_process_name(id) do
+    "#{__MODULE__}-#{id}" |> String.to_atom
+  end
+
   #Handlers
 
   def handle_cast({:drop_disc, [column_number]}, state) do
@@ -110,6 +116,7 @@ defmodule ConnectFour.Game do
 
         #print turn info
         turn = get_turn(player)
+        player = get_player_number(player)
 
         #print board
         IO.puts "Current board"
@@ -231,10 +238,6 @@ defmodule ConnectFour.Game do
     rows |> Enum.reduce(fn(x, acc) -> Map.merge(x, acc) end)
   end
 
-  defp get_game_process_name(id) do
-    "#{__MODULE__}-#{id}" |> String.to_atom
-  end
-
   defp four_connected?(color, board) do
     cond do
       horizontal_win?(color, board) ->
@@ -334,6 +337,13 @@ defmodule ConnectFour.Game do
     case current do
       :player_1 -> :player_2
       :player_2 -> :player_1
+    end
+  end
+
+  defp get_player_number(current) do
+    case current do
+      :player_1 -> 1
+      :player_2 -> 2
     end
   end
 end
