@@ -1,13 +1,32 @@
 /**********************/
 // Redux
 /**********************/
+const api_root = "http://localhost:4000/api"
+
 const reducer = (state, action) => {
   switch (action.type) {
     case 'START': {
       const nextState = Object.assign({}, state)
 
+      fetch(api_root + '/game', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+        })
+      })
+      .then(function(response) {
+        return response.json()
+      }).then(function(json) {
+        console.log('parsed json', json)
+      }).catch(function(ex) {
+        console.log('parsing failed', ex)
+      })
+
       nextState.start = true
       board.state = nextState
+      console.log(nextState)
       return nextState
     }
     case 'DRAW': {
