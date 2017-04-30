@@ -19,14 +19,17 @@ const reducer = (state, action) => {
       .then(function(response) {
         return response.json()
       }).then(function(json) {
+        nextState.board = json.board
+        nextState.player = json.player
+        nextState.game_id = json.game_id
         console.log('parsed json', json)
       }).catch(function(ex) {
         console.log('parsing failed', ex)
       })
 
+      console.log(nextState)
       nextState.start = true
       board.state = nextState
-      console.log(nextState)
       return nextState
     }
     case 'DRAW': {
@@ -85,32 +88,23 @@ const reducer = (state, action) => {
       const nextState = Object.assign({}, state)
       const col = parseInt(action.col)
 
-      // Get the top-most index of an existing piece in the current column
-      const row = state.board[col].reduce((min, piece, index) => {
-        if (piece && index < min) return index
-        else return min
-      }, 6)
-
-      // If the current column is full, move is invalid
-      if (row === 0) {
-        nextState.invalidMove = true
-        board.state = nextState
-        return nextState
-      }
-      // Add piece to the top of the most recent piece, and track the move
-      else if (row > 0 && row <= 5) {
-        nextState.board[col][row-1] = state.player
-        nextState.moves.push( [col, row-1] )
-      }
-      // Column is empty, so add piece to the very bottom, and track the move
-      else {
-        nextState.board[col][5] = state.player
-        nextState.moves.push( [col, 5] )
-      }
-
-      // Move was valid
-      nextState.invalidMove = false
-      nextState.turns = ++state.turns
+      fetch(api_root + '/game/make_move?game_id=' + nextState.game_id + '&column=' + col, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+        })
+      })
+      .then(function(response) {
+        return response.json()
+      }).then(function(json) {
+        nextState.board = json.board
+        nextState.player = json.player
+        console.log('parsed json', json)
+      }).catch(function(ex) {
+        console.log('parsing failed', ex)
+      })
 
       board.state = nextState
       return nextState
