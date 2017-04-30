@@ -148,19 +148,61 @@ defmodule ConnectFour.GameTest do
       ["blue", "red", "blue", "red", "blue", "red", "blue"],
       ["red", "blue", "red", "blue", "red", "blue", "red"],
       ["blue", "red", "blue", "red", "blue", "red", "blue"]
-    ] |> ConnectFour.Matrix.from_list
+    ]
+    |> ConnectFour.Matrix.transpose
+    |> ConnectFour.Matrix.from_list
 
     ConnectFour.Game.set_board(context.game_pid, board)
 
     #place red in the top left
     ConnectFour.Game.drop_disc(context.game_pid, :player_1, 1)
 
-    #sleep for 50 seconds so the game state is updated
+    #sleep for 50 ms so the game state is updated
     :timer.sleep(50)
 
     game_status = ConnectFour.Game.get_game_status(context.game_pid)
     assert game_status.status == expected_status.status
     assert game_status.winner == expected_status.winner
+  end
+
+  test "AI should block threat", context do
+    opts = [mode: :single_player]
+    {:ok, game_pid} = ConnectFour.Game.start_link(opts)
+    ConnectFour.Game.reset_board(game_pid)
+
+    board = [
+      ["red", nil, nil, nil, nil, nil, nil],
+      ["red", nil, nil, "red", nil, nil, nil],
+      ["red", nil, nil, "blue", nil, nil, nil],
+      ["blue", nil, nil, "red", "red", nil, nil],
+      ["blue", nil, nil, "red", "red", nil, "blue"],
+      ["blue", nil, "red", "red", "blue", "blue", "blue"]
+    ]
+    |> ConnectFour.Matrix.transpose
+    |> ConnectFour.Matrix.from_list
+
+    ConnectFour.Game.set_board(game_pid, board)
+    game_status = ConnectFour.Game.get_game_status(game_pid)
+    assert game_status.board == board
+
+    expected_board = [
+      ["red", nil, nil, nil, nil, nil, nil],
+      ["red", nil, nil, "red", nil, nil, nil],
+      ["red", nil, nil, "blue", nil, nil, "red"],
+      ["blue", nil, nil, "red", "red", nil, "blue"],
+      ["blue", nil, nil, "red", "red", nil, "blue"],
+      ["blue", nil, "red", "red", "blue", "blue", "blue"]
+    ]
+    |> ConnectFour.Matrix.transpose
+    |> ConnectFour.Matrix.from_list
+
+    ConnectFour.Game.drop_disc(game_pid, :player_2, 7)
+
+    #sleep for 50 ms so the game state is updated
+    :timer.sleep(500)
+
+    game_status = ConnectFour.Game.get_game_status(game_pid)
+    assert game_status.board == expected_board
   end
 
 end
