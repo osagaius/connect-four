@@ -86,7 +86,7 @@ const reducer = (state, action) => {
     }
     case 'ADDPIECE': {
       const nextState = Object.assign({}, state)
-      const col = parseInt(action.col)
+      const col = parseInt(action.col) + 1
 
       fetch(api_root + '/game/make_move?game_id=' + nextState.game_id + '&column=' + col, {
         method: 'POST',
@@ -101,10 +101,18 @@ const reducer = (state, action) => {
       }).then(function(json) {
         nextState.board = json.board
         nextState.player = json.player
+        if (json.winner != null) {
+          console.log('winner detected')
+          nextState.win = true
+          nextState.start = false
+        }
+
         console.log('parsed json', json)
       }).catch(function(ex) {
         console.log('parsing failed', ex)
       })
+
+      console.log('nextState', nextState)
 
       board.state = nextState
       return nextState
