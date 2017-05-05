@@ -28,6 +28,8 @@ defmodule ConnectFour.GameController do
 
     Game.drop_disc(pid, col)
 
+    :timer.sleep(250)
+
     game = get_game(pid)
 
     send_resp(conn, 200, game |> Poison.encode!)
@@ -44,6 +46,8 @@ defmodule ConnectFour.GameController do
     board = game.board
     |> Map.new(fn {k, v} -> {Integer.to_string(k), v |> convert_keys} end)
     |> Matrix.to_list
+
+    Logger.warn("game state #{inspect game}")
 
     game = game
     |> Map.put(:board, board)
