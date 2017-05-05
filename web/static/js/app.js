@@ -1,7 +1,7 @@
 /**********************/
 // Redux
 /**********************/
-const api_root = "http://localhost:4000/api"
+const api_root = "https://intense-stream-19617.herokuapp.com/api"
 
 const reducer = (state, action) => {
   switch (action.type) {
