@@ -56,10 +56,12 @@ defmodule ConnectFour.Game do
     valid_columns = 1..@board_columns |> Enum.to_list
     cond do
       !Enum.member?(valid_columns, column_number) ->
-        Logger.warn("Invalid column number. Try on of these #{inspect valid_columns}")
+        msg = "Invalid column number. Try on of these #{inspect valid_columns}"
+        Logger.warn(msg)
+        {:error, msg}
       true ->
         internal_column_number = column_number-1
-        GenServer.cast(pid, {:drop_disc, [internal_column_number]})
+        GenServer.call(pid, {:drop_disc, [pid, internal_column_number]})
     end
   end
 
@@ -70,7 +72,7 @@ defmodule ConnectFour.Game do
   """
   def drop_disc(pid, player, column_number) do
     internal_column_number = column_number-1
-    GenServer.cast(pid, {:drop_disc, [player, internal_column_number]})
+    GenServer.call(pid, {:drop_disc, [pid, player, internal_column_number]})
   end
 
   @doc """
@@ -98,16 +100,21 @@ defmodule ConnectFour.Game do
     "#{__MODULE__}-#{id}" |> String.to_atom
   end
 
-  #Handlers
-
-  def handle_cast({:drop_disc, [column_number]}, state) do
-    player = state.turn
-    GenServer.cast(self(), {:drop_disc, [player, column_number]})
-    {:noreply, state}
+  def get_winner(board) do
+    cond do
+      four_connected?(get_player_color(:player_1), board) ->
+        1
+      four_connected?(get_player_color(:player_2), board) ->
+        2
+      true ->
+        nil
+    end
   end
 
-  def handle_cast({:drop_disc, [player, column_number]}, state) do
-    Logger.debug("handle_cast drop_disc player=#{player}, column=#{column_number}")
+  #Handlers
+
+  def handle_call({:drop_disc, [pid, column_number]}, _from, state) do
+    player = state.turn
     color = get_player_color(player)
 
     state = case state.status do
@@ -123,25 +130,85 @@ defmodule ConnectFour.Game do
         #Matrix.to_list(board) |> Matrix.print
         Matrix.to_list(board) |> Matrix.transpose |> Matrix.print
 
+        {status, winner} = cond do
+          count_empty_spaces(board) == 0 ->
+            Logger.warn "GAME OVER : tie"
+            {:tied, nil}
+          four_connected?(color, board) ->
+            Logger.warn "GAME OVER : #{player} has won"
+            {:complete, player}
+          true ->
+            Logger.warn("game still in progress")
+            {nil, nil}
+        end
+
         IO.puts "Turn: #{turn}"
 
         #TODO determine/update game state i.e. win/lose/tie etc.
-        GenServer.cast(self(), {:update_status, [color, board, player]})
+        #GenServer.cast(pid, {:update_status, [color, board, player]})
 
         # make a move if it is the computer's turn
         case state.mode == :single_player && turn == :player_1 do
           true ->
-            make_move_0(self(), board)
+            make_move_0(pid, board)
           _ -> nil
         end
 
-        %{state | board: board, turn: turn}
+        %{state | board: board, turn: turn, winner: winner, status: status}
+      _ ->
+        Logger.warn("Game state is #{state.status} and no action can be taken")
+        state
+    end
+    {:reply, {:ok, state}, state}
+  end
+
+  def handle_call({:drop_disc, [pid, player, column_number]}, _from, state) do
+    color = get_player_color(player)
+
+    state = case state.status do
+      nil ->
+        board = update_board(column_number, color, state.board)
+
+        #print turn info
+        turn = get_turn(player)
+        player = get_player_number(player)
+
+        #print board
+        IO.puts "Current board"
+        #Matrix.to_list(board) |> Matrix.print
+        Matrix.to_list(board) |> Matrix.transpose |> Matrix.print
+
+        {status, winner} = cond do
+          count_empty_spaces(board) == 0 ->
+            Logger.warn "GAME OVER : tie"
+            {:tied, nil}
+          four_connected?(color, board) ->
+            Logger.warn "GAME OVER : #{player} has won"
+            {:complete, get_player_number(player)}
+          true ->
+            Logger.warn("game still in progress")
+            {nil, nil}
+        end
+
+        IO.puts "Turn: #{turn}"
+
+        #TODO determine/update game state i.e. win/lose/tie etc.
+        GenServer.cast(pid, {:update_status, [color, board, player]})
+
+        # make a move if it is the computer's turn
+        case state.mode == :single_player && turn == :player_1 do
+          true ->
+            make_move_0(pid, board)
+          _ -> nil
+        end
+
+        %{state | board: board, turn: turn, winner: winner, status: status}
       _ ->
         Logger.warn("Game state is #{state.status} and no action can be taken")
         state
     end
 
-    {:noreply, state}
+    {:reply, state, state}
   end
 
   def handle_cast({:reset_game_board}, state) do
@@ -161,7 +228,7 @@ defmodule ConnectFour.Game do
         {:tied, nil}
       four_connected?(color, board) ->
         Logger.info "GAME OVER : #{player} has won"
-        {:complete, player}
+        {:complete, get_player_number(player)}
       true -> {nil, nil}
     end
 
