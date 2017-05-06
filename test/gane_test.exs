@@ -57,7 +57,7 @@ defmodule ConnectFour.GameTest do
   test "determine win - horizontal", context do
     player_1 = context.player_1
     column = 1
-    expected_status = %{status: :complete, winner: player_1}
+    expected_status = %{status: :complete, winner: 1}
 
     for n <- 1..4, do: ConnectFour.Game.drop_disc(context.game_pid, :player_1, n)
 
@@ -72,7 +72,7 @@ defmodule ConnectFour.GameTest do
   test "determine win - vertical", context do
     player = context.player_2
     column = 1
-    expected_status = %{status: :complete, winner: player}
+    expected_status = %{status: :complete, winner: 2}
 
     for n <- 1..4, do: ConnectFour.Game.drop_disc(context.game_pid, :player_2, column)
 
@@ -87,7 +87,7 @@ defmodule ConnectFour.GameTest do
   test "determine win - ascending diagonal", context do
     player = context.player_2
     column = 1
-    expected_status = %{status: :complete, winner: player}
+    expected_status = %{status: :complete, winner: 2}
 
     ConnectFour.Game.drop_disc(context.game_pid, :player_2, 1)
 
@@ -114,7 +114,7 @@ defmodule ConnectFour.GameTest do
   test "determine win - descending diagonal", context do
     player = context.player_2
     column = 1
-    expected_status = %{status: :complete, winner: player}
+    expected_status = %{status: :complete, winner: 2}
 
     ConnectFour.Game.drop_disc(context.game_pid, :player_2, 7)
 
@@ -168,7 +168,7 @@ defmodule ConnectFour.GameTest do
   test "AI should block threat", context do
     opts = [mode: :single_player]
     {:ok, game_pid} = ConnectFour.Game.start_link(opts)
-    ConnectFour.Game.reset_board(game_pid)
+    ConnectFour.Game.set_board(game_pid, ConnectFour.Game.generate_default_board())
 
     board = [
       ["red", nil, nil, nil, nil, nil, nil],
@@ -199,7 +199,7 @@ defmodule ConnectFour.GameTest do
     ConnectFour.Game.drop_disc(game_pid, :player_2, 7)
 
     #sleep for 50 ms so the game state is updated
-    :timer.sleep(500)
+    :timer.sleep(1000)
 
     game_status = ConnectFour.Game.get_game_status(game_pid)
     assert game_status.board == expected_board
