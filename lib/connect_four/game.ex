@@ -30,14 +30,17 @@ defmodule ConnectFour.Game do
       game_id: opts[:game_id]
     }
 
-    case mode do
+    state = case mode do
       :single_player ->
         # make the initial move as the AI,
         # in the center column
-        __MODULE__.drop_disc(self(), 4)
+        internal_column_number = 3
+        color = get_player_color(:player_1)
+        get_new_state(:player_1, color, state.board, internal_column_number, state)
+
       _ ->
         #don't do anything
-        nil
+        state
     end
 
     IO.puts "Turn: #{state.turn}"
@@ -76,17 +79,10 @@ defmodule ConnectFour.Game do
   end
 
   @doc """
-  Resets the game board to its default state.
-  """
-  def reset_board(pid) do
-    GenServer.cast(pid, {:reset_game_board})
-  end
-
-  @doc """
   Set the game board to the specified board.
   """
   def set_board(pid, board) do
-    GenServer.cast(pid, {:set_game_board, [board]})
+    GenServer.call(pid, {:set_game_board, [board]})
   end
 
   @doc """
@@ -111,18 +107,47 @@ defmodule ConnectFour.Game do
     end
   end
 
+  def generate_default_board() do
+    board_columns = for n <- 0..(@board_columns-1), do: %{n => generate_default_board_rows()}
+    board_columns |> Enum.reduce(fn(x, acc) -> Map.merge(x, acc) end)
+  end
+
   #Handlers
 
   def handle_call({:drop_disc, [pid, column_number]}, _from, state) do
     player = state.turn
     color = get_player_color(player)
 
+    state = get_new_state(player, color, state.board, column_number, state)
+
+    {:reply, {:ok, state}, state}
+  end
+
+  def handle_call({:drop_disc, [pid, player, column_number]}, _from, state) do
+    color = get_player_color(player)
+
+    state = get_new_state(player, color, state.board, column_number, state)
+
+    {:reply, state, state}
+  end
+
+  def handle_call({:set_game_board, [board]}, _from, state) do
+    state = %{state | board: board}
+    {:reply, {:ok, state}, state}
+  end
+
+  def handle_call({:get_game_status}, from, state) do
+    reply = state
+    {:reply, reply, state}
+  end
+
+  #Private Helpers
+  defp get_new_state(player, color, board, column_number, state) do
     state = case state.status do
       nil ->
-        board = update_board(column_number, color, state.board)
+        board = update_board(column_number, color, board)
 
-        #print turn info
-        turn = get_turn(player)
+        turn = get_next_turn(player)
         player = get_player_number(player)
 
         #print board
@@ -144,104 +169,26 @@ defmodule ConnectFour.Game do
 
         IO.puts "Turn: #{turn}"
 
-        #TODO determine/update game state i.e. win/lose/tie etc.
-        #GenServer.cast(pid, {:update_status, [color, board, player]})
-
         # make a move if it is the computer's turn
+        # and we're in single player mode
         case state.mode == :single_player && turn == :player_1 do
           true ->
-            make_move_0(pid, board)
-          _ -> nil
-        end
+            color = get_player_color(turn)
+            col = make_move_0(board) - 1
+            Logger.warn("current pieces at col #{inspect board[col]}")
 
-        %{state | board: board, turn: turn, winner: winner, status: status}
+            get_new_state(turn, color, board, col, state)
+          _ ->
+            %{state | board: board, turn: turn, winner: winner, status: status}
+        end
+        
       _ ->
         Logger.warn("Game state is #{state.status} and no action can be taken")
         state
     end
-    {:reply, {:ok, state}, state}
   end
 
-  def handle_call({:drop_disc, [pid, player, column_number]}, _from, state) do
-    color = get_player_color(player)
-
-    state = case state.status do
-      nil ->
-        board = update_board(column_number, color, state.board)
-
-        #print turn info
-        turn = get_turn(player)
-        player = get_player_number(player)
-
-        #print board
-        IO.puts "Current board"
-        #Matrix.to_list(board) |> Matrix.print
-        Matrix.to_list(board) |> Matrix.transpose |> Matrix.print
-
-        {status, winner} = cond do
-          count_empty_spaces(board) == 0 ->
-            Logger.warn "GAME OVER : tie"
-            {:tied, nil}
-          four_connected?(color, board) ->
-            Logger.warn "GAME OVER : #{player} has won"
-            {:complete, get_player_number(player)}
-          true ->
-            Logger.warn("game still in progress")
-            {nil, nil}
-        end
-
-        IO.puts "Turn: #{turn}"
-
-        #TODO determine/update game state i.e. win/lose/tie etc.
-        GenServer.cast(pid, {:update_status, [color, board, player]})
-
-        # make a move if it is the computer's turn
-        case state.mode == :single_player && turn == :player_1 do
-          true ->
-            make_move_0(pid, board)
-          _ -> nil
-        end
-
-        %{state | board: board, turn: turn, winner: winner, status: status}
-      _ ->
-        Logger.warn("Game state is #{state.status} and no action can be taken")
-        state
-    end
-
-    {:reply, state, state}
-  end
-
-  def handle_cast({:reset_game_board}, state) do
-    board = generate_default_board()
-
-    {:noreply, %{state | board: board}}
-  end
-
-  def handle_cast({:set_game_board, [board]}, state) do
-    {:noreply, %{state | board: board}}
-  end
-
-  def handle_cast({:update_status, [color, board, player]}, state) do
-    {status, winner} = cond do
-      count_empty_spaces(board) == 0 ->
-        Logger.info "GAME OVER : tie"
-        {:tied, nil}
-      four_connected?(color, board) ->
-        Logger.info "GAME OVER : #{player} has won"
-        {:complete, get_player_number(player)}
-      true -> {nil, nil}
-    end
-
-    {:noreply, %{state | status: status, winner: winner}}
-  end
-
-  def handle_call({:get_game_status}, from, state) do
-    reply = state
-    {:reply, reply, state}
-  end
-
-  #Private Helpers
-  defp make_move_0(game_pid, board) do
+  defp make_move_0(board) do
     # find threats (possible wins for the other player)
     opponent_wins = find_wins(get_player_color(:player_2), board)
 
@@ -262,9 +209,6 @@ defmodule ConnectFour.Game do
 
     # block a threat, execute a self-win, or use a random column
     column = (threat_column_number || self_win_column_number || :rand.uniform(@board_columns))
-
-    __MODULE__.drop_disc(game_pid, column)
-
   end
 
   defp find_wins(color, board) do
@@ -273,31 +217,35 @@ defmodule ConnectFour.Game do
     # if a win exists, return the columns
     boards = for n <- 0..(@board_columns-1), do: {n, update_board(n, color, board)}
 
-
     boards
     |> Enum.filter(fn{col, board} -> four_connected?(color, board) end)
     |> Enum.map(fn{col, board} -> col end)
   end
 
   defp update_board(column_number, color, board) do
-    column = board |> Enum.at(column_number) |> elem(1)
+    Logger.warn("attempting to update board column_number=#{column_number} color=#{color} board=#{inspect board}")
 
-    available_slots = column |> Enum.filter(fn{k, v} -> v == nil end) |> Enum.into(%{})
-
-    case available_slots |> Enum.count do
-      0 ->
-        Logger.warn("No available slots in column #{column_number}")
+    valid_columns = 0..(@board_columns-1) |> Enum.to_list
+    cond do
+      !Enum.member?(valid_columns, column_number) ->
+        msg = "Invalid column number."
+        Logger.warn(msg)
         board
-      _ ->
-        slot = available_slots |> Map.keys |> List.last
-        put_in(board[column_number][slot], color)
+      true ->
+        column = board |> Enum.at(column_number) |> elem(1)
+
+        available_slots = column |> Enum.filter(fn{k, v} -> v == nil end) |> Enum.into(%{})
+
+        case available_slots |> Enum.count do
+          0 ->
+            Logger.warn("No available slots in column #{column_number}")
+            board
+          _ ->
+            slot = available_slots |> Map.keys |> List.last
+            put_in(board[column_number][slot], color)
+        end
     end
 
-  end
-
-  defp generate_default_board() do
-    board_columns = for n <- 0..(@board_columns-1), do: %{n => generate_default_board_rows()}
-    board_columns |> Enum.reduce(fn(x, acc) -> Map.merge(x, acc) end)
   end
 
   defp generate_default_board_rows() do
@@ -400,7 +348,7 @@ defmodule ConnectFour.Game do
     end
   end
 
-  defp get_turn(current) do
+  defp get_next_turn(current) do
     case current do
       :player_1 -> :player_2
       :player_2 -> :player_1
