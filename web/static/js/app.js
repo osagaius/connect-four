@@ -105,6 +105,7 @@ const reducer = (state, action) => {
           console.log('winner detected')
           nextState.win = true
           nextState.start = false
+          nextState.processing = false
         }
 
         console.log('parsed json', json)
@@ -138,7 +139,8 @@ const initialState = {
   player: Math.floor(Math.random() * (11 - 1)) + 1 <= 5 ? 1 : 2,
   moves: [],
   invalidMove: false,
-  turns: 1
+  turns: 1,
+  processing: false
 }
 
 const store = Redux.createStore(reducer, initialState)
@@ -162,33 +164,19 @@ const draw = () => {
 // Determine if there is a winner after placing a game piece
 function winner() {
   const state = store.getState()
-  // Make sure that the move was valid
-  if (state.invalidMove) return false
 
-  // Turn 8 is the earliest possible winnable turn
-  if (state.turns >= 8) {
-    const grid = state.board
-    const moves = state.moves
-    const dir = [ [0, -1], [1, -1], [1, 0], [1, 1],
-                  [0, 1], [-1, 1], [-1, 0], [-1, -1] ]
+  return state.winner != null
+}
 
-    // Loop through the move history starting from most recent
-    for (let i = moves.length - 1; i >= 0; i--) {
-      // Check all of the possible directions on the board
-      for (let j = 0; j < dir.length; j++) {
-        if (checkAdjacent(grid, moves[i][0], moves[i][1], dir[j])) {
-          return true
-        }
-      }
-    }
+const detectWin = () => {
+  const state = store.getState()
+  console.log("detectWin got event!!!", state.win)
+
+  // If a move history exists, add DOM piece indicator
+  if (state.win == true) {
+    console.log("win detected!!!")
+    store.dispatch( { type: 'WIN' } )
   }
-
-  // If no one has won by now, the game is a draw
-  if (state.turns === 43) {
-    store.dispatch( { type: 'DRAW' } )
-  }
-
-  return false
 }
 
 // Get values from adjacent spots
@@ -211,6 +199,8 @@ function checkAdjacent(grid, c, r, [ x, y ]) {
 }
 
 store.subscribe(draw)
+store.subscribe(winner)
+store.subscribe(detectWin)
 
 /*********************/
 // VueJS
@@ -234,7 +224,8 @@ const board = new Vue({
     },
     // Player clicks on a board column
     addPiece: function(event) {
-      if (this.state.start) {
+      if (this.state.start && !this.state.processing && !this.processing) {
+        this.rocessing = true
         store.dispatch( { type: 'ADDPIECE', col: event.target.dataset.col } )
         if (winner()) {
           store.dispatch( { type: 'WIN' } )
